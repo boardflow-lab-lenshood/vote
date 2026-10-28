@@ -1,6 +1,5 @@
-from flask import Flask, render_template, request, make_response, g
+from flask import Flask, render_template, request, make_response, g, jsonify
 from redis import Redis
-from redis.exceptions import RedisError
 from redis.exceptions import RedisError
 import os
 import socket
@@ -47,6 +46,11 @@ def hello():
     ))
     resp.set_cookie('voter_id', voter_id)
     return resp
+
+
+@app.get("/api/options")
+def api_options():
+    return jsonify({"a": option_a, "b": option_b})
 
 
 if __name__ == "__main__":
