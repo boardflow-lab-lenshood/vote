@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, make_response, g
 from redis import Redis
+from redis.exceptions import RedisError
+from redis.exceptions import RedisError
 import os
 import socket
 import random
@@ -49,3 +51,13 @@ def hello():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80, debug=True, threaded=True)
+
+
+@app.get("/healthz")
+def healthz():
+    try:
+        get_redis().ping()
+    except RedisError:
+        app.logger.exception("Redis readiness check failed")
+        return {"status": "unavailable", "service": "vote"}, 503
+    return {"status": "ok", "service": "vote"}
