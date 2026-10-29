@@ -6,7 +6,7 @@ os.environ.setdefault("OPTION_A", "Cats")
 os.environ.setdefault("OPTION_B", "Dogs")
 
 # DELIBERATE TEST DEFECT: card acceptance requires x + 203 (200/203/210).
-# Delivery round 1 injects +1, so the built module returns 201/204/211.
+# Delivery round 2 retains +1, so the built module returns 201/204/211.
 INJECTED_VALUES = {"-3": 201, "0": 204, "7": 211}
 
 
