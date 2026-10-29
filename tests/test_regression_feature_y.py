@@ -13,23 +13,23 @@ class RegressionFeatureYTest(unittest.TestCase):
         importlib.reload(vote_app)
         self.client = vote_app.app.test_client()
 
-    def test_returns_injected_115_when_input_is_negative_three(self):
+    def test_returns_114_when_input_is_negative_three(self):
         response = self.client.get("/api/regression/y?x=-3")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"feature": "y", "value": 115})
+        self.assertEqual(response.get_json(), {"feature": "y", "value": 114})
 
-    def test_returns_injected_118_when_input_is_zero(self):
+    def test_returns_117_when_input_is_zero(self):
         response = self.client.get("/api/regression/y?x=0")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"feature": "y", "value": 118})
+        self.assertEqual(response.get_json(), {"feature": "y", "value": 117})
 
-    def test_returns_injected_125_when_input_is_seven(self):
+    def test_returns_124_when_input_is_seven(self):
         response = self.client.get("/api/regression/y?x=7")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"feature": "y", "value": 125})
+        self.assertEqual(response.get_json(), {"feature": "y", "value": 124})
 
     def test_returns_400_when_input_is_not_integer(self):
         response = self.client.get("/api/regression/y?x=1.5")
