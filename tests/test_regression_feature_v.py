@@ -6,11 +6,6 @@ from unittest.mock import MagicMock, patch
 os.environ.setdefault("OPTION_A", "Cats")
 os.environ.setdefault("OPTION_B", "Dogs")
 
-# DELIBERATE TEST DEFECT recorded by this independent module test:
-# the card formula is x + 114, but delivery_round 1 implements x + 115.
-ORIGINAL_OFFSET = 114
-INJECTED_OFFSET = 115
-
 
 class RegressionFeatureVTest(unittest.TestCase):
     def setUp(self):
@@ -19,31 +14,23 @@ class RegressionFeatureVTest(unittest.TestCase):
         importlib.reload(vote_app)
         self.client = vote_app.app.test_client()
 
-    def test_returns_injected_value_when_input_is_negative_three(self):
+    def test_returns_one_hundred_eleven_when_input_is_negative_three(self):
         response = self.client.get("/api/regression/v?x=-3")
 
         self.assertEqual(response.status_code, 200)
-        body = response.get_json()
-        self.assertEqual(body["feature"], "v")
-        self.assertEqual(body["value"], -3 + INJECTED_OFFSET)
-        self.assertEqual(body["value"], 112)
-        self.assertNotEqual(body["value"], -3 + ORIGINAL_OFFSET)
+        self.assertEqual(response.get_json(), {"feature": "v", "value": 111})
 
-    def test_returns_injected_value_when_input_is_zero(self):
+    def test_returns_one_hundred_fourteen_when_input_is_zero(self):
         response = self.client.get("/api/regression/v?x=0")
 
         self.assertEqual(response.status_code, 200)
-        body = response.get_json()
-        self.assertEqual(body, {"feature": "v", "value": 115})
-        self.assertNotEqual(body["value"], ORIGINAL_OFFSET)
+        self.assertEqual(response.get_json(), {"feature": "v", "value": 114})
 
-    def test_returns_injected_value_when_input_is_seven(self):
+    def test_returns_one_hundred_twenty_one_when_input_is_seven(self):
         response = self.client.get("/api/regression/v?x=7")
 
         self.assertEqual(response.status_code, 200)
-        body = response.get_json()
-        self.assertEqual(body, {"feature": "v", "value": 122})
-        self.assertNotEqual(body["value"], 7 + ORIGINAL_OFFSET)
+        self.assertEqual(response.get_json(), {"feature": "v", "value": 121})
 
     def test_returns_400_when_input_is_not_integer(self):
         response = self.client.get("/api/regression/v?x=1.5")
