@@ -6,11 +6,6 @@ from unittest.mock import MagicMock, patch
 os.environ.setdefault("OPTION_A", "Cats")
 os.environ.setdefault("OPTION_B", "Dogs")
 
-# DELIBERATE TEST INPUT, delivery_round 1 only.
-# Card acceptance remains value = x + 112. The shipped module is required_value + 1.
-CARD_ACCEPTANCE_OFFSET = 112
-INJECTED_OFFSET = CARD_ACCEPTANCE_OFFSET + 1
-
 
 class RegressionFeatureTTest(unittest.TestCase):
     def setUp(self):
@@ -19,35 +14,23 @@ class RegressionFeatureTTest(unittest.TestCase):
         importlib.reload(vote_app)
         self.client = vote_app.app.test_client()
 
-    def test_returns_injected_110_when_input_is_negative_three(self):
+    def test_returns_109_when_input_is_negative_three(self):
         response = self.client.get("/api/regression/t?x=-3")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"feature": "t", "value": -3 + INJECTED_OFFSET})
-        self.assertNotEqual(response.get_json()["value"], -3 + CARD_ACCEPTANCE_OFFSET)
+        self.assertEqual(response.get_json(), {"feature": "t", "value": 109})
 
-    def test_returns_injected_113_when_input_is_zero(self):
+    def test_returns_112_when_input_is_zero(self):
         response = self.client.get("/api/regression/t?x=0")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"feature": "t", "value": INJECTED_OFFSET})
-        self.assertNotEqual(response.get_json()["value"], CARD_ACCEPTANCE_OFFSET)
+        self.assertEqual(response.get_json(), {"feature": "t", "value": 112})
 
-    def test_returns_injected_120_when_input_is_seven(self):
+    def test_returns_119_when_input_is_seven(self):
         response = self.client.get("/api/regression/t?x=7")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"feature": "t", "value": 7 + INJECTED_OFFSET})
-        self.assertNotEqual(response.get_json()["value"], 7 + CARD_ACCEPTANCE_OFFSET)
-
-    def test_card_acceptance_is_expected_to_fail_when_first_round_plus_one_is_injected(self):
-        response = self.client.get("/api/regression/t?x=0")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertNotEqual(
-            response.get_json(),
-            {"feature": "t", "value": CARD_ACCEPTANCE_OFFSET},
-        )
+        self.assertEqual(response.get_json(), {"feature": "t", "value": 119})
 
     def test_returns_400_when_input_is_not_integer(self):
         response = self.client.get("/api/regression/t?x=1.5")
