@@ -3,8 +3,8 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-os.environ.setdefault("OPTION_A", "Cats")
-os.environ.setdefault("OPTION_B", "Dogs")
+os.environ.setdefault("OPTION_A", "猫派")
+os.environ.setdefault("OPTION_B", "狗派")
 
 EXPECTED_VALUE = {
     "-3": 104,
@@ -64,7 +64,7 @@ class RegressionFeatureOTest(unittest.TestCase):
 
         self.assertEqual(home.status_code, 200)
         self.assertEqual(options.status_code, 200)
-        self.assertEqual(options.get_json(), {"a": "Cats", "b": "Dogs"})
+        self.assertEqual(options.get_json(), {"a": "猫派", "b": "狗派"})
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.get_json(), {"status": "ok", "service": "vote"})
 

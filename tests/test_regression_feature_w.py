@@ -2,8 +2,8 @@ import importlib
 import os
 import unittest
 
-os.environ.setdefault("OPTION_A", "Cats")
-os.environ.setdefault("OPTION_B", "Dogs")
+os.environ.setdefault("OPTION_A", "猫派")
+os.environ.setdefault("OPTION_B", "狗派")
 
 # Card formula x + 115. The round-1 +1 injection was removed in delivery round 2.
 EXPECTED_VALUES = {"-3": 112, "0": 115, "7": 122}
@@ -58,7 +58,7 @@ class RegressionFeatureWTest(unittest.TestCase):
 
         self.assertEqual(home.status_code, 200)
         self.assertEqual(options.status_code, 200)
-        self.assertEqual(options.get_json(), {"a": "Cats", "b": "Dogs"})
+        self.assertEqual(options.get_json(), {"a": "猫派", "b": "狗派"})
 
 
 if __name__ == "__main__":

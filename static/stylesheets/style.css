@@ -41,6 +41,15 @@ button.b{
   font-size: 14px;
 }
 
+#vote-confirmation{
+  margin: 12px auto 0;
+  width: 330px;
+  color: #254356;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
 #hostname{
   position: absolute;
   bottom: 100px;

@@ -3,8 +3,8 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-os.environ.setdefault("OPTION_A", "Cats")
-os.environ.setdefault("OPTION_B", "Dogs")
+os.environ.setdefault("OPTION_A", "猫派")
+os.environ.setdefault("OPTION_B", "狗派")
 
 
 class ApiOptionsTest(unittest.TestCase):
@@ -20,7 +20,7 @@ class ApiOptionsTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, "application/json")
-        self.assertEqual(response.get_json(), {"a": "Cats", "b": "Dogs"})
+        self.assertEqual(response.get_json(), {"a": "猫派", "b": "狗派"})
 
     def test_returns_configured_labels_when_env_overrides(self):
         with patch.dict(os.environ, {"OPTION_A": "Tea", "OPTION_B": "Coffee"}, clear=False):
@@ -35,8 +35,8 @@ class ApiOptionsTest(unittest.TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Cats", response.data)
-        self.assertIn(b"Dogs", response.data)
+        self.assertIn("猫派".encode(), response.data)
+        self.assertIn("狗派".encode(), response.data)
 
     def test_post_still_enqueues_vote_when_form_submitted(self):
         redis = MagicMock()
@@ -48,6 +48,19 @@ class ApiOptionsTest(unittest.TestCase):
         queue, payload = redis.rpush.call_args.args
         self.assertEqual(queue, "votes")
         self.assertIn('"vote": "a"', payload)
+
+    def test_homepage_shows_submitted_choice_when_vote_posted(self):
+        redis = MagicMock()
+        with patch.object(self.vote_app, "get_redis", return_value=redis):
+            cat_vote = self.client.post("/", data={"vote": "a"})
+            dog_vote = self.client.post("/", data={"vote": "b"})
+
+        self.assertIn("你已投给猫派".encode(), cat_vote.data)
+        self.assertIn('data-vote="a"', cat_vote.get_data(as_text=True))
+        self.assertNotIn("你已投给狗派".encode(), cat_vote.data)
+        self.assertIn("你已投给狗派".encode(), dog_vote.data)
+        self.assertIn('data-vote="b"', dog_vote.get_data(as_text=True))
+        self.assertNotIn("你已投给猫派".encode(), dog_vote.data)
 
 
 if __name__ == "__main__":
