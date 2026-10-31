@@ -62,6 +62,19 @@ class ApiOptionsTest(unittest.TestCase):
         self.assertIn('data-vote="b"', dog_vote.get_data(as_text=True))
         self.assertNotIn("你已投给猫派".encode(), dog_vote.data)
 
+    def test_homepage_keeps_confirmation_when_same_voter_refreshes(self):
+        redis = MagicMock()
+        with patch.object(self.vote_app, "get_redis", return_value=redis):
+            posted = self.client.post("/", data={"vote": "a"})
+            voter_id = posted.headers.get("Set-Cookie", "")
+            refreshed = self.client.get("/")
+
+        self.assertIn("voter_id=", voter_id)
+        self.assertIn("你已投给猫派".encode(), refreshed.data)
+        self.assertIn('data-vote="a"', refreshed.get_data(as_text=True))
+        self.assertNotIn("你已投给狗派".encode(), refreshed.data)
+        redis.rpush.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

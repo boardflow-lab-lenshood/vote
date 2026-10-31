@@ -30,7 +30,9 @@ def hello():
     if not voter_id:
         voter_id = hex(random.getrandbits(64))[2:-1]
 
-    vote = None
+    vote = request.cookies.get('vote')
+    if vote not in ('a', 'b'):
+        vote = None
 
     if request.method == 'POST':
         redis = get_redis()
@@ -47,6 +49,8 @@ def hello():
         vote=vote,
     ))
     resp.set_cookie('voter_id', voter_id)
+    if vote in ('a', 'b'):
+        resp.set_cookie('vote', vote)
     return resp
 
 
