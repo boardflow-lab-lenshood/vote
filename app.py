@@ -9,6 +9,37 @@ import random
 import json
 import logging
 
+DEFAULT_OPTIONS = (("a", "猫派"), ("b", "狗派"))
+SERVICE_NAME = "vote"
+
+
+def load_options():
+    options = {}
+    for key, default in DEFAULT_OPTIONS:
+        env_name = "OPTION_" + key.upper()
+        label = os.getenv(env_name)
+        options[key] = default if label is None else label
+    extra = os.getenv("OPTIONS", "")
+    for item in extra.split(","):
+        item = item.strip()
+        if not item or "=" not in item:
+            continue
+        key, label = item.split("=", 1)
+        key = key.strip()
+        if not key or key in options:
+            continue
+        options[key] = label.strip()
+    return options
+
+
+def options_payload(options=None):
+    current = load_options() if options is None else options
+    payload = dict(current)
+    payload["service"] = SERVICE_NAME
+    payload["option_count"] = len(current)
+    return payload
+
+
 option_a = os.getenv('OPTION_A', "猫派")
 option_b = os.getenv('OPTION_B', "狗派")
 hostname = socket.gethostname()
@@ -56,7 +87,7 @@ def hello():
 
 @app.get("/api/options")
 def api_options():
-    return jsonify({"a": option_a, "b": option_b})
+    return jsonify(options_payload())
 
 
 @app.get("/api/about")
