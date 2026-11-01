@@ -59,6 +59,11 @@ def api_options():
     return jsonify({"a": option_a, "b": option_b})
 
 
+@app.get("/api/about")
+def api_about():
+    return jsonify({"service": "vote", "api_version": "1"})
+
+
 FEATURE_NAME = re.compile(r'^[a-z][a-z0-9_]{0,31}$')
 FEATURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'regression_features')
 
