@@ -28,7 +28,10 @@ class ApiAboutTest(unittest.TestCase):
         homepage = self.client.get("/")
 
         self.assertEqual(options.status_code, 200)
-        self.assertEqual(options.get_json(), {"a": "猫派", "b": "狗派"})
+        self.assertEqual(
+            options.get_json(),
+            {"a": "猫派", "b": "狗派", "service": "vote", "option_count": 2},
+        )
         self.assertEqual(homepage.status_code, 200)
         self.assertIn("猫派".encode(), homepage.data)
         self.assertIn("狗派".encode(), homepage.data)
