@@ -55,7 +55,7 @@ class RegressionFeatureZTest(unittest.TestCase):
 
         self.assertEqual(home.status_code, 200)
         self.assertEqual(options.status_code, 200)
-        self.assertEqual(options.get_json(), {"a": "猫派", "b": "狗派"})
+        self.assertEqual(options.get_json(), {"a": "猫派", "b": "狗派", "service": "vote", "option_count": 2})
 
 
 if __name__ == "__main__":
