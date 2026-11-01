@@ -58,7 +58,7 @@ class RegressionFeatureGTest(unittest.TestCase):
 
         self.assertEqual(home.status_code, 200)
         self.assertEqual(options.status_code, 200)
-        self.assertEqual(options.get_json(), {"a": "猫派", "b": "狗派"})
+        self.assertEqual(options.get_json(), {"a": "猫派", "b": "狗派", "service": "vote", "option_count": 2})
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.get_json(), {"status": "ok", "service": "vote"})
 
