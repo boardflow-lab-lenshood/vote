@@ -54,6 +54,39 @@ def hello():
     return resp
 
 
+TRACE_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._:-]{0,63}')
+
+
+@app.post("/api/arena/seven-20261103/votes")
+def api_arena_seven_votes() -> tuple[Response, int]:
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "invalid_json_object"}), 400
+
+    voter_id = payload.get("voter_id")
+    vote = payload.get("vote")
+    trace_id = payload.get("trace_id")
+    if (
+        not isinstance(voter_id, str)
+        or not 1 <= len(voter_id) <= 255
+        or not voter_id.strip()
+        or '\x00' in voter_id
+    ):
+        return jsonify({"error": "invalid_voter_id"}), 400
+    if not isinstance(vote, str) or vote not in ('a', 'b'):
+        return jsonify({"error": "invalid_vote"}), 400
+    if not isinstance(trace_id, str) or TRACE_ID.fullmatch(trace_id) is None:
+        return jsonify({"error": "invalid_trace_id"}), 400
+
+    message = {"voter_id": voter_id, "vote": vote, "trace_id": trace_id}
+    try:
+        get_redis().rpush('votes', json.dumps(message))
+    except RedisError:
+        app.logger.exception("Tracked vote enqueue failed")
+        return jsonify({"error": "queue_unavailable"}), 503
+    return jsonify({"accepted": True, **message}), 202
+
+
 @app.get("/api/options")
 def api_options():
     return jsonify({"a": option_a, "b": option_b})
