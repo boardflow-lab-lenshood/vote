@@ -59,6 +59,7 @@ def api_options():
     return jsonify({"a": option_a, "b": option_b})
 
 
+@app.get("/api/arena/three-20261102/options-metadata")
 @app.get("/api/arena/20261102/options-metadata")
 def api_arena_options_metadata() -> Response:
     return jsonify({

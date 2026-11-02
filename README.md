@@ -14,7 +14,7 @@ Voting frontend. Existing routes are unchanged:
 
 Labels come from `OPTION_A` and `OPTION_B`, defaulting to `猫派` and `狗派`.
 
-`GET /api/arena/20261102/options-metadata` returns the active option labels in a stable `a`, `b` order:
+`GET /api/arena/three-20261102/options-metadata` returns the active option labels in a stable `a`, `b` order. The existing `/api/arena/20261102/options-metadata` endpoint remains available with the same response:
 
 ```json
 {"service": "vote", "option_count": 2, "options": [{"id": "a", "label": "猫派"}, {"id": "b", "label": "狗派"}]}
