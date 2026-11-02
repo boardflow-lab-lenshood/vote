@@ -1,8 +1,6 @@
 # base defines a base stage that uses the official python runtime base image
 FROM python:3.11-slim AS base
 
-# Readiness is observed over HTTP by the delivery runner; no curl layer needed.
-
 # Set the application directory
 WORKDIR /usr/local/app
 
@@ -24,6 +22,10 @@ COPY . .
 
 # Make port 80 available for links and/or publish
 EXPOSE 80
+
+# Probe readiness with Python's standard library, including the Redis dependency.
+HEALTHCHECK --interval=5s --timeout=3s --retries=3 --start-period=15s \
+    CMD ["python", "-c", "import sys, urllib.request; response = urllib.request.urlopen('http://127.0.0.1:80/healthz', timeout=2); sys.exit(0 if response.status == 200 else 1)"]
 
 # Define our command to be run when launching the container
 CMD ["gunicorn", "app:app", "-b", "0.0.0.0:80", "--log-file", "-", "--access-logfile", "-", "--workers", "4", "--keep-alive", "0"]
