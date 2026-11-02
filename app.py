@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, make_response, g, jsonify
+from flask import Flask, Response, render_template, request, make_response, g, jsonify
 from redis import Redis
 from redis.exceptions import RedisError
 import importlib.util
@@ -57,6 +57,18 @@ def hello():
 @app.get("/api/options")
 def api_options():
     return jsonify({"a": option_a, "b": option_b})
+
+
+@app.get("/api/arena/20261102/options-metadata")
+def api_arena_options_metadata() -> Response:
+    return jsonify({
+        "service": "vote",
+        "option_count": 2,
+        "options": [
+            {"id": "a", "label": option_a},
+            {"id": "b", "label": option_b},
+        ],
+    })
 
 
 @app.get("/api/uat/poll-info")
