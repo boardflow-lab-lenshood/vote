@@ -35,8 +35,10 @@ def hello():
         vote = None
 
     if request.method == 'POST':
+        vote = request.form.get('vote')
+        if vote not in ('a', 'b'):
+            return jsonify({"error": "invalid_vote"}), 400
         redis = get_redis()
-        vote = request.form['vote']
         app.logger.info('Received vote for %s', vote)
         data = json.dumps({'voter_id': voter_id, 'vote': vote})
         redis.rpush('votes', data)
