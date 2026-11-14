@@ -33,10 +33,16 @@ class ApiOptionsTest(unittest.TestCase):
 
     def test_homepage_still_returns_200_when_get(self):
         response = self.client.get("/")
+        body = response.get_data(as_text=True)
+        main = body[body.index("<main"):body.index("</main>")]
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("猫派".encode(), response.data)
         self.assertIn("狗派".encode(), response.data)
+        self.assertIn('<html lang="zh-CN">', body)
+        self.assertEqual(body.count('<main id="content-container">'), 1)
+        self.assertIn("<h1>猫派 vs 狗派!</h1>", body)
+        self.assertIn("<form", main)
 
     def test_post_still_enqueues_vote_when_form_submitted(self):
         redis = MagicMock()
