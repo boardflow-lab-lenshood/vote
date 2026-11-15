@@ -73,8 +73,10 @@ button.b{
   text-align: center;
 }
 
-#content-container-center h3{
+#content-container-center h1{
   color: #254356;
+  font-size: 1.17em;
+  margin: 1em 0;
 }
 
 #choice{
