@@ -53,9 +53,32 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.cache/ms-playwright" .venv/bin/python tests/brow
 Chromium 通过实际 HTTP 请求及按钮提交验证 27 个非法组合、4 次合法投票/
 双向改投、cookie 和刷新回读；Redis 写入由同一方法的 spy 记录，其他 Redis
 命令被拒绝。报告和截图保存到忽略的 `.test-artifacts/`。
-外部 CDN 请求被阻断，既有页面依赖 CDN 的 jQuery 可能产生 `$ is not defined`，
-会原样记录在报告中；此隔离测试覆盖原生表单和服务端状态，不验证 CDN
-样式、图标和 jQuery 增强行为，也不代替测试泳道在确认候选部署上的验收。
+外部 CDN 请求被阻断；按钮禁用和追加勾选节点使用原生 DOM，不依赖 jQuery。
+此隔离测试不验证 CDN 样式和图标字体的加载，也不代替测试泳道在确认候选部署上的验收。
 Linux 主机需具备 Chromium 系统库；脚本不会自动安装系统依赖。
+
+### 投票按钮的中文名称回归
+
+`tests/test_vote_accessibility.py` 已纳入上述隔离单元测试，覆盖默认值、单独/同时
+变化的选项、空值、中文、单双引号、`& < >`、实体及注入样例在无/a/b vote cookie
+下的实际模板输出。按钮名称为 `投给` 加当前选项原文；可见文字和原生提交字段保留。
+
+复用上述 worktree 内的虚拟环境和 Chromium，无须启动其他仓库或外部服务：
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.cache/ms-playwright" .venv/bin/python tests/browser_vote_accessibility.py
+```
+
+脚本在 `127.0.0.1` 随机端口启动本仓 Flask，先从 `/api/options` 读取预期选项，
+再以真实 Chromium 检查六组选项的三种状态（共 18 组），包括 Playwright 精确
+角色定位及 Chromium 可访问性树中的计算后名称。执行已投 b → a → b 的真实
+按钮 POST，验证 `vote=a/b`、原 voter_id、队列写入、Cookie、禁用/勾选节点，
+以及 GET 和刷新回读。Redis 写入由 spy 接管，其他 Redis 命令和连接直接失败；
+外部 CDN 请求被阻断，页面的原生 DOM 状态增强仍实际执行。
+
+证据保存在 `.test-artifacts/vote-accessibility-report.json`（时间、URL、git HEAD、
+浏览器版本、三状态 DOM/计算名称、提交与错误记录），默认三状态截图为
+`.test-artifacts/accessibility-{none,a,b}.png`。这些是隔离本地自测证据；真实候选
+部署的三状态验收应由测试阶段另行记录部署 URL、版本及对应仓库提交。
 
 `GET /api/regression/<name>?x=<integer>` loads `regression_features/<name>.py` and returns `evaluate(x)` as JSON. `name` must match `[a-z][a-z0-9_]{0,31}`. A missing module returns 404 JSON, a non-integer `x` returns 400 JSON, and a module exception returns 500 JSON with a diagnostic that does not include secrets. The built-in `echo` module returns `{"feature":"echo","value":x}`.
