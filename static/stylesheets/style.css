@@ -36,9 +36,13 @@ button.b{
 }
 
 #tip{
+  width: 330px;
+  max-width: 100%;
+  margin: 12px auto 0;
   text-align: left;
-  color: #c0c9ce;
+  color: #536b78;
   font-size: 14px;
+  line-height: 1.5;
 }
 
 #vote-confirmation{
