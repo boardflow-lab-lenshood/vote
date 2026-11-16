@@ -1,7 +1,10 @@
 import importlib
+import json
 import os
 import unittest
 from unittest.mock import MagicMock, patch
+
+from werkzeug.datastructures import MultiDict
 
 os.environ.setdefault("OPTION_A", "猫派")
 os.environ.setdefault("OPTION_B", "狗派")
@@ -74,6 +77,80 @@ class ApiOptionsTest(unittest.TestCase):
         self.assertIn('data-vote="a"', refreshed.get_data(as_text=True))
         self.assertNotIn("你已投给狗派".encode(), refreshed.data)
         redis.rpush.assert_called_once()
+
+    def test_invalid_votes_return_exact_json_without_touching_redis_or_vote_cookie(self):
+        invalid_votes = (None, "", " ", "\t", "\n", "\r\n", "A", "B", " a", " b", "a ", "b ", "c", "ab")
+
+        for cookie_vote in ("a", "b"):
+            for invalid_vote in invalid_votes:
+                with self.subTest(cookie_vote=cookie_vote, invalid_vote=invalid_vote):
+                    client = self.vote_app.app.test_client()
+                    client.set_cookie("vote", cookie_vote)
+                    redis = MagicMock()
+                    with patch.object(self.vote_app, "get_redis", return_value=redis) as get_redis:
+                        response = client.post(
+                            "/",
+                            data={} if invalid_vote is None else {"vote": invalid_vote},
+                        )
+
+                    self.assertEqual(response.status_code, 400)
+                    self.assertEqual(response.headers.get("Content-Type"), "application/json")
+                    self.assertEqual(response.data, b'{"error":"invalid_vote"}')
+                    get_redis.assert_not_called()
+                    redis.rpush.assert_not_called()
+                    self.assertNotIn("vote=", response.headers.get("Set-Cookie", ""))
+
+                    refreshed = client.get("/")
+                    self.assertEqual(refreshed.status_code, 200)
+                    self.assertIn(
+                        f"你已投给{'猫派' if cookie_vote == 'a' else '狗派'}".encode(),
+                        refreshed.data,
+                    )
+
+    def test_direct_vote_b_is_queued_and_sets_vote_cookie(self):
+        redis = MagicMock()
+        with patch.object(self.vote_app, "get_redis", return_value=redis):
+            response = self.client.post("/", data={"vote": "b"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("你已投给狗派".encode(), response.data)
+        self.assertTrue(any("vote=b" in header for header in response.headers.getlist("Set-Cookie")))
+        redis.rpush.assert_called_once()
+        payload = json.loads(redis.rpush.call_args.args[1])
+        self.assertEqual(payload["vote"], "b")
+
+    def test_switching_vote_b_to_a_reuses_voter_id_and_updates_cookie(self):
+        redis = MagicMock()
+        with patch.object(self.vote_app, "get_redis", return_value=redis):
+            first = self.client.post("/", data={"vote": "b"})
+            second = self.client.post("/", data={"vote": "a"})
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertIn("你已投给猫派".encode(), second.data)
+        self.assertTrue(any("vote=a" in header for header in second.headers.getlist("Set-Cookie")))
+
+        self.assertEqual(redis.rpush.call_count, 2)
+        first_payload = json.loads(redis.rpush.call_args_list[0].args[1])
+        second_payload = json.loads(redis.rpush.call_args_list[1].args[1])
+        self.assertEqual(first_payload["voter_id"], second_payload["voter_id"])
+        self.assertEqual(first_payload["vote"], "b")
+        self.assertEqual(second_payload["vote"], "a")
+
+    def test_repeated_vote_fields_are_rejected_before_redis(self):
+        client = self.vote_app.app.test_client()
+        redis = MagicMock()
+        with patch.object(self.vote_app, "get_redis", return_value=redis) as get_redis:
+            response = client.post(
+                "/",
+                data=MultiDict([("vote", "a"), ("vote", "b")]),
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.headers.get("Content-Type"), "application/json")
+        self.assertEqual(response.data, b'{"error":"invalid_vote"}')
+        get_redis.assert_not_called()
+        redis.rpush.assert_not_called()
 
 
 if __name__ == "__main__":
