@@ -28,13 +28,14 @@ def get_redis():
 def hello():
     submitted_vote = None
     if request.method == 'POST':
-        submitted_vote = request.form.get('vote')
-        if submitted_vote not in ('a', 'b'):
+        submitted_votes = request.form.getlist('vote')
+        if len(submitted_votes) != 1 or submitted_votes[0] not in ('a', 'b'):
             return Response(
                 b'{"error":"invalid_vote"}',
                 status=400,
                 content_type='application/json',
             )
+        submitted_vote = submitted_votes[0]
 
     voter_id = request.cookies.get('voter_id')
     if not voter_id:

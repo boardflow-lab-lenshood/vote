@@ -4,6 +4,8 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
+from werkzeug.datastructures import MultiDict
+
 os.environ.setdefault("OPTION_A", "猫派")
 os.environ.setdefault("OPTION_B", "狗派")
 
@@ -134,6 +136,21 @@ class ApiOptionsTest(unittest.TestCase):
         self.assertEqual(first_payload["voter_id"], second_payload["voter_id"])
         self.assertEqual(first_payload["vote"], "b")
         self.assertEqual(second_payload["vote"], "a")
+
+    def test_repeated_vote_fields_are_rejected_before_redis(self):
+        client = self.vote_app.app.test_client()
+        redis = MagicMock()
+        with patch.object(self.vote_app, "get_redis", return_value=redis) as get_redis:
+            response = client.post(
+                "/",
+                data=MultiDict([("vote", "a"), ("vote", "b")]),
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.headers.get("Content-Type"), "application/json")
+        self.assertEqual(response.data, b'{"error":"invalid_vote"}')
+        get_redis.assert_not_called()
+        redis.rpush.assert_not_called()
 
 
 if __name__ == "__main__":
