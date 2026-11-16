@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, make_response, g, jsonify
+from flask import Flask, Response, render_template, request, make_response, g, jsonify
 from redis import Redis
 from redis.exceptions import RedisError
 import importlib.util
@@ -26,6 +26,16 @@ def get_redis():
 
 @app.route("/", methods=['POST','GET'])
 def hello():
+    submitted_vote = None
+    if request.method == 'POST':
+        submitted_vote = request.form.get('vote')
+        if submitted_vote not in ('a', 'b'):
+            return Response(
+                b'{"error":"invalid_vote"}',
+                status=400,
+                content_type='application/json',
+            )
+
     voter_id = request.cookies.get('voter_id')
     if not voter_id:
         voter_id = hex(random.getrandbits(64))[2:-1]
@@ -36,7 +46,7 @@ def hello():
 
     if request.method == 'POST':
         redis = get_redis()
-        vote = request.form['vote']
+        vote = submitted_vote
         app.logger.info('Received vote for %s', vote)
         data = json.dumps({'voter_id': voter_id, 'vote': vote})
         redis.rpush('votes', data)
