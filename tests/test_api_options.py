@@ -3,33 +3,56 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-os.environ.setdefault("OPTION_A", "猫派")
-os.environ.setdefault("OPTION_B", "狗派")
-
 
 class ApiOptionsTest(unittest.TestCase):
     def setUp(self):
+        environment = patch.dict(os.environ)
+        environment.start()
+        self.addCleanup(environment.stop)
+        os.environ.pop("OPTION_A", None)
+        os.environ.pop("OPTION_B", None)
+
         import app as vote_app
 
         importlib.reload(vote_app)
         self.vote_app = vote_app
         self.client = vote_app.app.test_client()
 
-    def test_returns_current_labels_when_defaults(self):
-        response = self.client.get("/api/options")
-
+    def assert_options_response(self, response, expected):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, "application/json")
-        self.assertEqual(response.get_json(), {"a": "猫派", "b": "狗派"})
+        self.assertEqual(response.headers.get("Cache-Control"), "no-store")
+        self.assertEqual(response.get_json(), expected)
 
-    def test_returns_configured_labels_when_env_overrides(self):
-        with patch.dict(os.environ, {"OPTION_A": "Tea", "OPTION_B": "Coffee"}, clear=False):
+    def test_returns_default_options_when_env_unset(self):
+        response = self.client.get("/api/options")
+
+        self.assert_options_response(response, {"a": "猫派", "b": "狗派"})
+
+    def test_returns_configured_options_when_env_overrides(self):
+        with patch.dict(os.environ, {"OPTION_A": "Tea", "OPTION_B": "Coffee"}):
             importlib.reload(self.vote_app)
             client = self.vote_app.app.test_client()
             response = client.get("/api/options")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"a": "Tea", "b": "Coffee"})
+        self.assert_options_response(response, {"a": "Tea", "b": "Coffee"})
+
+    def test_uses_loaded_configuration_until_app_is_reloaded(self):
+        with patch.dict(os.environ, {"OPTION_A": "Tea", "OPTION_B": "Coffee"}):
+            response = self.client.get("/api/options")
+
+        self.assert_options_response(response, {"a": "猫派", "b": "狗派"})
+
+    def test_repeated_reads_do_not_touch_redis_queue_or_cookies(self):
+        redis = MagicMock()
+        with patch.object(self.vote_app, "get_redis", return_value=redis) as get_redis:
+            for _ in range(3):
+                response = self.client.get("/api/options")
+                self.assert_options_response(response, {"a": "猫派", "b": "狗派"})
+                self.assertNotIn("Set-Cookie", response.headers)
+
+        get_redis.assert_not_called()
+        redis.rpush.assert_not_called()
 
     def test_homepage_still_returns_200_when_get(self):
         response = self.client.get("/")
@@ -74,6 +97,14 @@ class ApiOptionsTest(unittest.TestCase):
         self.assertIn('data-vote="a"', refreshed.get_data(as_text=True))
         self.assertNotIn("你已投给狗派".encode(), refreshed.data)
         redis.rpush.assert_called_once()
+
+    def test_no_store_is_not_applied_to_other_routes(self):
+        with patch.object(self.vote_app, "get_redis", return_value=MagicMock()):
+            for path in ("/", "/healthz", "/api/uat/poll-info", "/static/stylesheets/style.css"):
+                with self.subTest(path=path):
+                    with self.client.get(path) as response:
+                        self.assertEqual(response.status_code, 200)
+                        self.assertNotIn("no-store", response.cache_control)
 
 
 if __name__ == "__main__":
