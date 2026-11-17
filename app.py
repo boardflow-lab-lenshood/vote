@@ -56,12 +56,14 @@ def hello():
 
 @app.get("/api/options")
 def api_options():
-    return jsonify({"a": option_a, "b": option_b})
+    response = jsonify({"a": option_a, "b": option_b})
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/uat/poll-info")
 def api_uat_poll_info():
-    return jsonify({
+    response = jsonify({
         "title": f"{option_a} vs {option_b}!",
         "options": [
             {"id": "a", "label": option_a},
@@ -69,6 +71,8 @@ def api_uat_poll_info():
         ],
         "option_count": 2,
     })
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 FEATURE_NAME = re.compile(r'^[a-z][a-z0-9_]{0,31}$')

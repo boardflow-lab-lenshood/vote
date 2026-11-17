@@ -20,6 +20,7 @@ class ApiUatPollInfoTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertEqual(
             response.get_json(),
             {
@@ -40,6 +41,7 @@ class ApiUatPollInfoTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertEqual(
             response.get_json(),
             {
@@ -66,6 +68,8 @@ class ApiUatPollInfoTest(unittest.TestCase):
         response = self.client.get("/api/options")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertEqual(response.get_json(), {"a": "猫派", "b": "狗派"})
 
     def test_homepage_stays_unchanged_when_poll_info_added(self):

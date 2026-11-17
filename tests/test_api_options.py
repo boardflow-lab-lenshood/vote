@@ -20,6 +20,7 @@ class ApiOptionsTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertEqual(response.get_json(), {"a": "猫派", "b": "狗派"})
 
     def test_returns_configured_labels_when_env_overrides(self):
@@ -29,12 +30,15 @@ class ApiOptionsTest(unittest.TestCase):
             response = client.get("/api/options")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertEqual(response.get_json(), {"a": "Tea", "b": "Coffee"})
 
     def test_homepage_still_returns_200_when_get(self):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.headers.get("Cache-Control"), "no-store")
         self.assertIn("猫派".encode(), response.data)
         self.assertIn("狗派".encode(), response.data)
 
@@ -44,6 +48,7 @@ class ApiOptionsTest(unittest.TestCase):
             response = self.client.post("/", data={"vote": "a"})
 
         self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.headers.get("Cache-Control"), "no-store")
         redis.rpush.assert_called_once()
         queue, payload = redis.rpush.call_args.args
         self.assertEqual(queue, "votes")
