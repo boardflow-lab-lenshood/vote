@@ -77,7 +77,7 @@ class ApiUatPollInfoTest(unittest.TestCase):
 
     def test_healthz_still_checks_redis_when_poll_info_added(self):
         redis = MagicMock()
-        redis.ping.side_effect = ConnectionError("isolated Redis failure")
+        redis.ping.side_effect = self.vote_app.RedisError("isolated Redis failure")
         with patch.object(self.vote_app, "get_redis", return_value=redis):
             response = self.client.get("/healthz")
 
