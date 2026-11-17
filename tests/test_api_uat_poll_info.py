@@ -76,8 +76,12 @@ class ApiUatPollInfoTest(unittest.TestCase):
         self.assertIn("狗派".encode(), response.data)
 
     def test_healthz_still_checks_redis_when_poll_info_added(self):
-        response = self.client.get("/healthz")
+        redis = MagicMock()
+        redis.ping.side_effect = ConnectionError("isolated Redis failure")
+        with patch.object(self.vote_app, "get_redis", return_value=redis):
+            response = self.client.get("/healthz")
 
+        redis.ping.assert_called_once_with()
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.get_json()["service"], "vote")
 
