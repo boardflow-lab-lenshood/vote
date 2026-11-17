@@ -57,9 +57,9 @@ class ApiOptionsCacheTest(unittest.TestCase):
             with vote_app.app.test_client() as client:
                 for path in ("/", "/static/stylesheets/style.css", "/api/uat/poll-info"):
                     with self.subTest(path=path):
-                        response = client.get(path)
-                        self.assertEqual(response.status_code, 200)
-                        self.assertFalse(response.cache_control.no_store)
+                        with client.get(path) as response:
+                            self.assertEqual(response.status_code, 200)
+                            self.assertFalse(response.cache_control.no_store)
 
 
 if __name__ == "__main__":
