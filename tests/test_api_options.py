@@ -3,14 +3,17 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-os.environ.setdefault("OPTION_A", "猫派")
-os.environ.setdefault("OPTION_B", "狗派")
-
 
 class ApiOptionsTest(unittest.TestCase):
     def setUp(self):
         import app as vote_app
 
+        self.addCleanup(importlib.reload, vote_app)
+        environment = patch.dict(os.environ)
+        environment.start()
+        self.addCleanup(environment.stop)
+        os.environ.pop("OPTION_A", None)
+        os.environ.pop("OPTION_B", None)
         importlib.reload(vote_app)
         self.vote_app = vote_app
         self.client = vote_app.app.test_client()
@@ -19,7 +22,8 @@ class ApiOptionsTest(unittest.TestCase):
         response = self.client.get("/api/options")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.mimetype, "application/json")
+        self.assertEqual(response.headers.get("Cache-Control"), "no-store")
         self.assertEqual(response.get_json(), {"a": "猫派", "b": "狗派"})
 
     def test_returns_configured_labels_when_env_overrides(self):
@@ -29,7 +33,38 @@ class ApiOptionsTest(unittest.TestCase):
             response = client.get("/api/options")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/json")
+        self.assertEqual(response.headers.get("Cache-Control"), "no-store")
         self.assertEqual(response.get_json(), {"a": "Tea", "b": "Coffee"})
+
+    def test_defaults_apply_only_to_unset_options(self):
+        cases = [
+            ({"OPTION_A": "茶"}, {"a": "茶", "b": "狗派"}),
+            ({"OPTION_B": ""}, {"a": "猫派", "b": ""}),
+        ]
+        for configuration, expected in cases:
+            with self.subTest(configuration=configuration):
+                with patch.dict(os.environ, configuration):
+                    importlib.reload(self.vote_app)
+                    response = self.vote_app.app.test_client().get("/api/options")
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.mimetype, "application/json")
+                self.assertEqual(response.headers.get("Cache-Control"), "no-store")
+                self.assertEqual(response.get_json(), expected)
+
+    def test_labels_remain_as_loaded_when_environment_changes(self):
+        with patch.dict(os.environ, {"OPTION_A": "Tea", "OPTION_B": "Coffee"}):
+            response = self.client.get("/api/options")
+
+        self.assertEqual(response.get_json(), {"a": "猫派", "b": "狗派"})
+
+    def test_no_store_is_not_added_to_other_responses(self):
+        for path in ("/", "/api/uat/poll-info", "/static/stylesheets/style.css"):
+            with self.subTest(path=path):
+                with self.client.get(path) as response:
+                    self.assertEqual(response.status_code, 200)
+                    self.assertFalse(response.cache_control.no_store)
 
     def test_homepage_still_returns_200_when_get(self):
         response = self.client.get("/")
