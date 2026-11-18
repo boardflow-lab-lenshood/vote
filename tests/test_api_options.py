@@ -3,33 +3,64 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-os.environ.setdefault("OPTION_A", "猫派")
-os.environ.setdefault("OPTION_B", "狗派")
-
 
 class ApiOptionsTest(unittest.TestCase):
     def setUp(self):
         import app as vote_app
 
+        # Cleanups run in reverse order: restore the environment before reloading.
+        self.addCleanup(importlib.reload, vote_app)
+        env_patch = patch.dict(os.environ, clear=False)
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+        os.environ.pop("OPTION_A", None)
+        os.environ.pop("OPTION_B", None)
         importlib.reload(vote_app)
         self.vote_app = vote_app
         self.client = vote_app.app.test_client()
 
+    def assert_options_response(self, response, labels):
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/json")
+        self.assertEqual(response.headers.get("Cache-Control"), "no-store")
+        self.assertEqual(response.get_json(), labels)
+
     def test_returns_current_labels_when_defaults(self):
         response = self.client.get("/api/options")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content_type, "application/json")
-        self.assertEqual(response.get_json(), {"a": "猫派", "b": "狗派"})
+        self.assert_options_response(response, {"a": "猫派", "b": "狗派"})
 
     def test_returns_configured_labels_when_env_overrides(self):
-        with patch.dict(os.environ, {"OPTION_A": "Tea", "OPTION_B": "Coffee"}, clear=False):
+        with patch.dict(os.environ, {"OPTION_A": "茶 Tea", "OPTION_B": "咖啡 Coffee"}):
             importlib.reload(self.vote_app)
             client = self.vote_app.app.test_client()
             response = client.get("/api/options")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"a": "Tea", "b": "Coffee"})
+        self.assert_options_response(response, {"a": "茶 Tea", "b": "咖啡 Coffee"})
+
+    def test_preserves_empty_configured_labels(self):
+        with patch.dict(os.environ, {"OPTION_A": "", "OPTION_B": ""}):
+            importlib.reload(self.vote_app)
+            response = self.vote_app.app.test_client().get("/api/options")
+
+        self.assert_options_response(response, {"a": "", "b": ""})
+
+    def test_options_does_not_access_redis_or_set_cookies(self):
+        with patch.object(self.vote_app, "get_redis", side_effect=AssertionError("Redis accessed")) as get_redis:
+            response = self.client.get("/api/options")
+
+        self.assert_options_response(response, {"a": "猫派", "b": "狗派"})
+        get_redis.assert_not_called()
+        self.assertNotIn("Set-Cookie", response.headers)
+
+    def test_cache_policy_is_local_to_options(self):
+        for path in ("/", "/api/uat/poll-info", "/static/stylesheets/style.css"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.addCleanup(response.close)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(response.cache_control.no_store)
 
     def test_homepage_still_returns_200_when_get(self):
         response = self.client.get("/")

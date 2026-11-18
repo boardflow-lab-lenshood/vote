@@ -56,7 +56,9 @@ def hello():
 
 @app.get("/api/options")
 def api_options():
-    return jsonify({"a": option_a, "b": option_b})
+    response = jsonify({"a": option_a, "b": option_b})
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 
 @app.get("/api/uat/poll-info")
